@@ -45,6 +45,7 @@ static openrac_mod* s_mod;
 static int (*s_add)(int);
 static void (*s_record)(int);
 static int s_tag;
+static int s_unload_record;
 static int s_frames;
 static int s_input;
 static int s_views;
@@ -95,6 +96,12 @@ OPENRAC_MOD_EXPORT void openrac_mod_query(openrac_mod_info* info) {
     info->api_minor = OPENRAC_MOD_TARGET_MINOR;
     info->id = TEST_MOD_ID;
     info->version = "1.0.0";
+}
+
+OPENRAC_MOD_EXPORT void openrac_mod_unload(void) {
+    if (s_unload_record && s_record) {
+        s_record(15000 + s_tag);
+    }
 }
 
 static int add(int x) {
@@ -901,6 +908,7 @@ OPENRAC_MOD_EXPORT int openrac_mod_load(const openrac_api* api, openrac_mod* mod
     s_tag = (int)api->setting_int(mod, "tag");
     s_record = (void (*)(int))api->function("Test_Record");
     const char* behaviour = api->setting_string(mod, "behaviour");
+    s_unload_record = strcmp(behaviour, "ok_unload") == 0;
     api->log(mod, OPENRAC_LOG_INFO, behaviour);
     if (strcmp(behaviour, "native_handles") == 0) {
         const openrac_graphics* graphics = api->graphics();

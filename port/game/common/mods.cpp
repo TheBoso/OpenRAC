@@ -1818,7 +1818,9 @@ bool view_source_can_use_vulkan() {
 void unload() {
     for (auto it = g_loaded.rbegin(); it != g_loaded.rend(); ++it) {
         if ((*it)->unload != nullptr) {
-            (*it)->unload();
+            const auto callback = (*it)->unload;
+            (*it)->unload = nullptr;
+            callback();
         }
     }
 }

@@ -128,7 +128,9 @@ void install(
             + std::string(mods::platform_key()) + R"(": "lib/)" + library_name() + R"("},
         "settings": [{"key": "tag", "name": "Tag", "type": "int", "default": 0},
                      {"key": "behaviour", "name": "Behaviour", "type": "choice", "default": "ok",
-                      "choices": [{"value": "ok", "name": "OK"}, {"value": "fail", "name": "Fail"},
+                      "choices": [{"value": "ok", "name": "OK"},
+                                  {"value": "ok_unload", "name": "Unload"},
+                                  {"value": "fail", "name": "Fail"},
                                   {"value": "unknown_hook", "name": "Unknown"},
                                   {"value": "bad_signature", "name": "Bad"},
                                   {"value": "input", "name": "Input"},
@@ -478,6 +480,22 @@ void two_mods_chain_in_load_order(const fs::path& plugins) {
     CHECK(
         g_slot_add == nullptr && add(0) == 1 && g_pad_hook == nullptr && !mods::g_frame_callbacks
     );
+}
+
+void unload_is_once_per_load(const fs::path& plugins) {
+    write(plugins / "plugins.json", R"({"format": 1, "mods": [
+        {"id": "test-a", "enabled": true, "settings": {"tag": 1, "behaviour": "ok_unload"}},
+        {"id": "test-b", "enabled": true, "settings": {"tag": 2, "behaviour": "ok_unload"}}]})");
+    g_records.clear();
+    CHECK(mods::load(host(plugins)) == "test-a 1.0.0, test-b 1.0.0");
+    mods::unload();
+    mods::unload();
+    mods::reset();
+    CHECK((g_records == std::vector<int>{15002, 15001}));
+    g_records.clear();
+    CHECK(mods::load(host(plugins)) == "test-a 1.0.0, test-b 1.0.0");
+    mods::reset();
+    CHECK((g_records == std::vector<int>{15002, 15001}));
 }
 
 // Interface 1.21: a hook point's entry, which the game calls by the point's symbol: the mods'
@@ -2854,6 +2872,7 @@ int main() {
     };
     openrac_guest_register(OPENRAC_OVERLAY_EXE, functions, 1);
     two_mods_chain_in_load_order(plugins);
+    unload_is_once_per_load(plugins);
     a_hook_point_is_called_as_the_game_calls_it(plugins);
     every_call_of_the_table_is_filled(plugins);
     menu_options_follow_the_newest_call(plugins);

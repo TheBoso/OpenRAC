@@ -260,6 +260,9 @@ void finish() {
 
 #ifdef OPENRAC_FRONTEND
 [[noreturn]] void leave() {
+    // Mods may call game functions to restore state; do so while sound and the frontend exist.
+    // The registered exit handler is a fallback for other exit paths, and unload is once-only.
+    mods::unload();
     // The sound's stream goes before the window, whose end is SDL's (Platform: SDL_Quit). Left to
     // the exit, its destructor freed the stream into SDL's freed state: the heap was corrupted
     // and the program faulted on its way out.
